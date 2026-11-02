@@ -113,7 +113,7 @@ TEF.write = [
     start: "Pendant un grand tournoi de jeux vidéo à Montréal, le courant s'est coupé juste avant la finale. Les milliers de spectateurs..."
   },
   {
-    id: "teletravail", sec: "B", min: 200, mins: 40, title: "Remote work: for or against?",
+    id: "teletravail", sec: "B", reg: "informal", min: 200, mins: 40, title: "Remote work: for or against?",
     task: "Un ami pense que le télétravail réduit la productivité. Écrivez-lui une lettre pour donner votre point de vue avec des arguments et des exemples (200 mots minimum).",
     taskEn: "A friend thinks remote work lowers productivity. Write him a letter giving your point of view with arguments and examples (200 words minimum).",
     taskEs: "Un amigo piensa que el teletrabajo reduce la productividad. Escríbale una carta dando su punto de vista con argumentos y ejemplos (mínimo 200 palabras).",
@@ -121,14 +121,14 @@ TEF.write = [
     model: "Cher Marc,\n\nJ'ai bien reçu ton message et je comprends tes doutes, mais je ne suis pas tout à fait d'accord avec toi. À mon avis, le télétravail peut même augmenter la productivité, à condition d'être bien organisé.\n\nD'abord, on gagne beaucoup de temps. Quand on évite deux heures de transport par jour, on peut commencer à travailler plus tôt, avec plus d'énergie. Ensuite, la maison offre souvent un environnement plus calme que l'open space, ce qui aide à se concentrer sur les tâches difficiles. Par exemple, depuis que ma sœur travaille à distance, elle termine ses projets plus rapidement qu'avant.\n\nCertes, tu as raison sur un point : la communication entre collègues peut devenir plus difficile. En revanche, il existe des solutions simples, comme des réunions courtes chaque matin ou des messages clairs sur une plateforme commune. De plus, un horaire hybride permet de combiner les avantages du bureau et de la maison.\n\nPar conséquent, je pense que le problème n'est pas le télétravail lui-même, mais la façon de l'organiser. Que penses-tu d'essayer cette formule pendant un mois afin de comparer les résultats?\n\nDans l'attente de ta réponse, je t'embrasse.\n\nPat"
   },
   {
-    id: "jeux-ecole", sec: "B", min: 200, mins: 40, title: "Video games at school",
+    id: "jeux-ecole", sec: "B", reg: "formal", min: 200, mins: 40, title: "Video games at school",
     task: "Un journal local demande l'avis de ses lecteurs : faut-il utiliser des jeux vidéo à l'école? Écrivez une lettre au journal pour exprimer votre opinion (200 mots minimum).",
     taskEn: "A local newspaper asks readers: should video games be used at school? Write a letter to the editor giving your opinion (200 words minimum).",
     taskEs: "Un periódico local pregunta a sus lectores: ¿se deben usar videojuegos en la escuela? Escriba una carta al periódico expresando su opinión (mínimo 200 palabras).",
     start: ""
   },
   {
-    id: "festival-ville", sec: "B", min: 200, mins: 40, title: "Improve the city festival",
+    id: "festival-ville", sec: "B", reg: "formal", min: 200, mins: 40, title: "Improve the city festival",
     task: "Votre ville organise un festival chaque été. Écrivez une lettre à la mairie pour proposer trois améliorations et expliquer pourquoi elles sont utiles (200 mots minimum).",
     taskEn: "Your city holds a festival every summer. Write a letter to city hall proposing three improvements and explaining why they are useful (200 words minimum).",
     taskEs: "Su ciudad organiza un festival cada verano. Escriba una carta al ayuntamiento proponiendo tres mejoras y explicando por qué son útiles (mínimo 200 palabras).",

@@ -70,6 +70,7 @@
         ${item('#/quebec', 'home', 'Québec corner', 'Canadian French you will hear on the exam day and after')}
         ${item('#/guide', 'grid', 'TEF guide', 'Exam anatomy and a weekly plan')}
         ${item('#/progress', 'flame', 'Progress & badges', 'Streaks, skills, achievements')}
+        ${item('#/talk', 'mic', 'Free conversation', 'Talk with an AI partner that answers you and corrects you')}
         ${item('#/settings', 'cog', 'Settings', 'Translations, voice, exam date, backup')}
       </div>`;
     }
@@ -155,10 +156,26 @@
         <label>Voice
           <select data-in="voice">${opt('', vs.length ? 'Automatic (prefers Canadian French)' : 'Automatic (no French voices found)', s.voice)}${vs.map(v => opt(v.name, v.name + ' · ' + v.lang, s.voice)).join('')}</select></label>
         <button class="btn ghost" data-act="testvoice">${icon('vol', 18)} Test voice</button>
+        <label class="check"><input data-in="recorded" type="checkbox" ${s.recorded !== false ? 'checked' : ''}> Use recorded neural voices when available</label>
+        <label class="check"><input data-in="hfdef" type="checkbox" ${s.hf !== false ? 'checked' : ''}> Hands-free speaking by default (the mic opens by itself)</label>
         <label>Theme
           <select data-in="theme">${opt('dark', 'Dark', s.theme)}${opt('light', 'Light', s.theme)}${opt('auto', 'Match my device', s.theme)}</select></label>
         <label class="check"><input data-in="sfx" type="checkbox" ${s.sfx ? 'checked' : ''}> Sound effects</label>
         <label class="check"><input data-in="once" type="checkbox" ${s.once ? 'checked' : ''}> Exam mode in listening: audio plays once</label>
+      </div>
+      <h2 class="sec">Voice lab</h2>
+      <div class="card form">${voiceLab(vs)}</div>
+      <h2 class="sec">Smart features</h2>
+      <div class="card form">
+        <b>Writing checker</b>
+        <label>Online grammar engine (LanguageTool)
+          <select data-in="ltset">${opt('', 'Ask me in the Write tab', s.lt)}${opt('on', 'On: send my text while I type', s.lt)}${opt('off', 'Off: instant offline checks only', s.lt)}</select></label>
+        <b>AI conversation partner</b>
+        <p class="muted small">Optional. Paste your own Anthropic API key to chat freely, get spoken replies and examiner-style review. The key stays in this browser, is not included in backups and goes only to api.anthropic.com. Create a key with a low monthly spend limit, and remove it on shared devices.</p>
+        ${TEF.ai.has() ? `<p class="mono small ok">Key saved: ${esc(TEF.ai.masked())}</p>` : ''}
+        <label>API key<input id="aikey" type="password" autocomplete="off" placeholder="${TEF.ai.has() ? 'Saved. Paste a new key to replace it' : 'sk-ant-…'}" spellcheck="false"></label>
+        <label>Model<input id="aimodel" type="text" value="${esc(TEF.ai.model())}" autocomplete="off" spellcheck="false"></label>
+        <div class="rate"><button class="btn blue" data-act="aisave">Save</button>${TEF.ai.has() ? '<button class="btn ghost" data-act="aiclear">Remove key</button>' : ''}</div>
       </div>
       <h2 class="sec">Backup</h2>
       <div class="card form">
@@ -187,6 +204,29 @@
   IN.theme = el => { S.settings.theme = el.value; u.save(); applyTheme(); };
   IN.sfx = el => { S.settings.sfx = el.checked; u.save(); };
   IN.once = el => { S.settings.once = el.checked; u.save(); };
+  function voiceLab(vs) {
+    const badge = { natural: ['Natural', 'ok'], premium: ['Premium', 'ok'], good: ['Good', ''], standard: ['Standard', ''], basic: ['Robotic', 'bad'] };
+    const best = vs[0] ? u.voiceTier(vs[0]) : '';
+    const rows = vs.slice(0, 8).map(v => { const t = u.voiceTier(v), b = badge[t]; return `<div class="vrow"><div><b>${esc(v.name)}</b><small class="mono muted">${esc(v.lang)}</small></div><span class="vb ${b[1]}">${b[0]}</span><button class="ico-btn" data-act="auditionv" data-n="${esc(v.name)}" aria-label="Audition">${icon('vol', 18)}</button></div>`; }).join('');
+    const warn = !vs.length ? '<p class="small">No French voice found on this device. Install one using the tips below.</p>' : (best === 'basic' || best === 'standard') ? '<p class="small">The best voice on this device sounds synthetic. These tips give much more human voices:</p>' : '<p class="small ok">Good voices found. Pick the one you like most above.</p>';
+    return `<p class="muted small">Ranked by naturalness. The top one is used when Voice is on Automatic.</p>${rows}${warn}
+      <details><summary class="small">How to get more natural voices</summary><ul class="small tips">
+        <li><b>Edge (desktop and Android)</b>: voices named “Natural” such as Sylvie or Antoine (fr-CA) are the best free option.</li>
+        <li><b>iPhone and iPad</b>: Settings, Accessibility, Spoken Content, Voices, French, then download a Premium or Enhanced voice.</li>
+        <li><b>Android Chrome</b>: Settings, System, Languages, Text-to-speech output, install French voice data.</li>
+        <li><b>Mac</b>: System Settings, Accessibility, Spoken Content, System voice, Manage Voices, pick Premium French.</li>
+        <li><b>Best of all</b>: the repository can generate recorded neural audio for every lesson. See the README, section Voices.</li></ul></details>`;
+  }
+  ACT.auditionv = el => { const prev = S.settings.voice; S.settings.voice = el.dataset.n; u.speak('Bonjour! Je suis prêt pour le TEF.'); S.settings.voice = prev; };
+  IN.recorded = el => { S.settings.recorded = el.checked; u.save(); };
+  IN.hfdef = el => { S.settings.hf = el.checked; u.save(); };
+  IN.ltset = el => { S.settings.lt = el.value; u.save(); };
+  ACT.aisave = () => {
+    const k = (document.getElementById('aikey').value || '').trim(), m = document.getElementById('aimodel').value;
+    if (k && !/^sk-/.test(k)) { u.toast('That does not look like an Anthropic key (starts with sk-)', 'bad'); return; }
+    TEF.ai.save(k, m === TEF.ai.defaultModel ? '' : m); u.toast('Saved on this device', 'xp'); u.rerender();
+  };
+  ACT.aiclear = () => { TEF.ai.clear(); u.toast('Key removed'); u.rerender(); };
   ACT.testvoice = () => u.speak('Bonjour! Prêt pour le TEF?');
   ACT.export = () => copyText(JSON.stringify(S), 'Backup copied');
   ACT.import = () => {

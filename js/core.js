@@ -12,9 +12,9 @@
   const DEFAULTS = () => ({
     v: 1, xp: 0, streak: 0, best: 0, lastDay: '', days: {}, srs: {}, drafts: {},
     done: { read: {}, listen: {}, speak: {}, write: {}, dict: {} },
-    stats: { quizOk: 0, quizAll: 0, words: 0, writeWords: 0, boss: 0, games: 0, qc: 0, shadow: 0, nums: 0 },
+    stats: { quizOk: 0, quizAll: 0, words: 0, writeWords: 0, boss: 0, games: 0, qc: 0, shadow: 0, nums: 0, fixes: 0, talk: 0, hf: 0 },
     badges: {},
-    settings: { help: 'off', rate: 1, voice: '', exam: '', goal: 100, theme: 'dark', sfx: true, name: '', once: false }
+    settings: { help: 'off', rate: 1, voice: '', exam: '', goal: 100, theme: 'dark', sfx: true, name: '', once: false, lt: '', recorded: true, hf: true, hard: false }
   });
   function merge(d, o) {
     if (!o || typeof o !== 'object') return d;
@@ -232,7 +232,10 @@
     { id: 'write2', i: '✍️', n: 'Wordsmith', d: 'Finish 2 writing tasks', t: s => Object.keys(s.done.write).length >= 2 },
     { id: 'boss', i: '👾', n: 'Boss slayer', d: 'Beat a boss', t: s => s.stats.boss >= 1 },
     { id: 'qc', i: '🍁', n: 'Québec curious', d: 'Open the Québec corner', t: s => s.stats.qc >= 1 },
-    { id: 'lvl5', i: '🚀', n: 'Level 5', d: 'Reach level 5', t: s => levelInfo(s.xp).L >= 5 }
+    { id: 'lvl5', i: '🚀', n: 'Level 5', d: 'Reach level 5', t: s => levelInfo(s.xp).L >= 5 },
+    { id: 'fix10', i: '✏️', n: 'Proofreader', d: 'Apply 10 suggested fixes', t: s => s.stats.fixes >= 10 },
+    { id: 'talk10', i: '💬', n: 'Conversationalist', d: '10 turns of free conversation', t: s => s.stats.talk >= 10 },
+    { id: 'hf', i: '🎙️', n: 'Hands-free', d: 'Finish a hands-free mission', t: s => s.stats.hf >= 1 }
   ];
   function checkBadges() {
     BADGES.forEach(b => {
@@ -245,32 +248,115 @@
     if (b) b.textContent = 'Lv ' + levelInfo().L;
   }
 
-  /* ---------- text to speech ---------- */
-  let VOICES = [], seqToken = 0;
-  function loadVoices() { try { VOICES = (speechSynthesis.getVoices() || []).filter(v => /^fr/i.test(v.lang)); } catch (e) { /* none */ } }
-  if ('speechSynthesis' in window) { loadVoices(); try { speechSynthesis.onvoiceschanged = () => { loadVoices(); if (location.hash === '#/settings') rerender(); }; } catch (e) { /* ignore */ } }
+  /* ---------- text to speech: voice ranking, recorded neural audio, chunking ---------- */
+  let VOICES = [], seqToken = 0, curAudio = null, liveUtts = [];
+  function loadVoices() { try { VOICES = (speechSynthesis.getVoices() || []).filter(v => /^fr/i.test(v.lang)); } catch (e) { VOICES = []; } }
+  if ('speechSynthesis' in window) {
+    loadVoices();
+    try { speechSynthesis.onvoiceschanged = () => { loadVoices(); if (location.hash === '#/settings') rerender(); }; } catch (e) { /* ignore */ }
+  }
+  // natural = neural cloud voices (Edge "Natural"), premium = Apple Enhanced/Premium, good = Google/network voices
+  function voiceTier(v) {
+    const n = v.name + ' ' + (v.voiceURI || '');
+    if (/natural|neural|online|multilingual/i.test(n)) return 'natural';
+    if (/premium|enhanced|am[ée]lior/i.test(n)) return 'premium';
+    if (/espeak|compact/i.test(n)) return 'basic';
+    if (/google/i.test(n) || v.localService === false) return 'good';
+    return 'standard';
+  }
+  const TIER_SCORE = { natural: 100, premium: 80, good: 60, standard: 40, basic: 10 };
+  const voiceScore = v => TIER_SCORE[voiceTier(v)] + (/^fr[-_]CA/i.test(v.lang) ? 12 : /^fr[-_]FR/i.test(v.lang) ? 6 : 0);
+  const FEM = /sylvie|denise|[ée]loise|vivienne|brigitte|julie|hortense|am[ée]lie|audrey|aur[ée]lie|chantal|marie|c[ée]line|l[ée]a\b|louise|female|femme|caroline|sophie|claire|ariane|charline|yara/i;
+  const MAL = /antoine|jean\b|henri|remy|r[ée]my|thierry|claude|paul\b|thomas|nicolas|daniel|jacques|mathieu|\bmale\b|homme|guillaume|maxime|eddy|reed|rocko/i;
+  const gender = v => (FEM.test(v.name) ? 'f' : MAL.test(v.name) ? 'm' : '');
   function voiceList() {
-    const pref = VOICES.filter(v => v.name === S.settings.voice);
-    const ca = VOICES.filter(v => /fr[-_]CA/i.test(v.lang) && v.name !== S.settings.voice);
-    const rest = VOICES.filter(v => !/fr[-_]CA/i.test(v.lang) && v.name !== S.settings.voice);
-    return pref.concat(ca, rest);
+    const pickName = S.settings.voice;
+    return VOICES.slice().sort((a, b) => ((b.name === pickName) - (a.name === pickName)) || (voiceScore(b) - voiceScore(a)));
+  }
+  // role A = the main voice, role B = a different voice (opposite gender when we can tell)
+  function pickVoice(role) {
+    const list = voiceList();
+    if (!list.length) return null;
+    const a = list[0];
+    if (role !== 'B') return a;
+    const ga = gender(a);
+    const rest = list.slice(1).filter(v => voiceScore(v) >= voiceScore(a) - 45);
+    return rest.find(v => ga && gender(v) && gender(v) !== ga) || rest.find(v => v.lang.toLowerCase() === a.lang.toLowerCase()) || rest[0] || null;
+  }
+  function chunkText(t) {
+    const clean = String(t).replace(/\s+/g, ' ').trim();
+    const parts = clean.match(/[^.!?…;:]+[.!?…;:]*\s*/g) || [clean];
+    const out = [];
+    parts.forEach(p => {
+      if (out.length && out[out.length - 1].length < 18) out[out.length - 1] += p; else out.push(p);
+    });
+    const res = [];
+    out.forEach(s => {
+      s = s.trim();
+      if (s.length > 150) { const i = s.indexOf(', ', Math.floor(s.length / 2) - 20); if (i > 0) { res.push(s.slice(0, i + 1)); res.push(s.slice(i + 2)); return; } }
+      if (s) res.push(s);
+    });
+    return res;
+  }
+  function stopCurrent() {
+    liveUtts = [];
+    try { speechSynthesis.cancel(); } catch (e) { /* ignore */ }
+    if (curAudio) { try { curAudio.pause(); } catch (e) { /* ignore */ } curAudio = null; }
+  }
+  function playRecorded(text, role, rate, o) {
+    const key = TEF.audioKey && TEF.audioKey(role, text);
+    if (!key || !TEF.audio || !TEF.audio[key]) return false;
+    try {
+      const a = new Audio('audio/' + key + '.mp3');
+      a.playbackRate = rate; a.preservesPitch = true; a.webkitPreservesPitch = true;
+      curAudio = a;
+      let done = false;
+      const fin = ok => {
+        if (done) return; done = true;
+        if (curAudio === a) curAudio = null;
+        if (ok) { if (o.onend) o.onend(); } else speakTTS(text, role, rate, o);
+      };
+      a.onended = () => fin(true);
+      a.onerror = () => fin(false);
+      const p = a.play();
+      if (p && p.catch) p.catch(() => fin(false));
+      return true;
+    } catch (e) { return false; }
+  }
+  function speakTTS(text, role, rate, o) {
+    if (!('speechSynthesis' in window)) { toast('Audio is not supported in this browser', 'bad'); if (o.onend) o.onend(); return; }
+    try { speechSynthesis.cancel(); } catch (e) { /* ignore */ }
+    let v = pickVoice(role), pitch = o.pitch || 1;
+    if (role === 'B' && !v) { v = pickVoice('A'); pitch *= 0.86; }
+    const slowFix = v && voiceTier(v) === 'basic' ? 0.95 : 1;
+    const chunks = chunkText(text);
+    liveUtts = chunks.map(c => {
+      const ut = new SpeechSynthesisUtterance(c);
+      ut.lang = v ? v.lang : 'fr-CA';
+      if (v) ut.voice = v;
+      ut.rate = rate * slowFix; ut.pitch = pitch;
+      return ut;
+    });
+    const last = liveUtts[liveUtts.length - 1];
+    if (!last) { if (o.onend) o.onend(); return; }
+    // some browsers never fire onend (no voice installed, iOS quirks), so a watchdog keeps hands-free flows moving
+    let fired = false, dog = null;
+    const finish = () => { if (fired) return; fired = true; clearTimeout(dog); if (o.onend) o.onend(); };
+    const est = 2500 + (String(text).length * 95) / Math.max(0.5, rate);
+    last.onend = finish;
+    last.onerror = e => { if (e && (e.error === 'interrupted' || e.error === 'canceled')) return; finish(); };
+    if (o.onend) dog = setTimeout(() => { if (liveUtts && liveUtts.indexOf(last) >= 0) finish(); }, est * 1.6);
+    liveUtts.forEach(ut => { try { speechSynthesis.speak(ut); } catch (e) { /* ignore */ } });
   }
   function speak(text, o) {
     o = o || {};
-    if (!('speechSynthesis' in window)) { toast('Audio is not supported in this browser', 'bad'); if (o.onend) o.onend(); return; }
-    try { speechSynthesis.cancel(); } catch (e) { /* ignore */ }
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'fr-CA';
-    const list = voiceList();
-    const v = list.length ? list[(o.voice || 0) % list.length] : null;
-    if (v) { u.voice = v; u.lang = v.lang; }
-    u.rate = o.rate || S.settings.rate || 1;
-    u.pitch = o.pitch || 1;
-    u.onend = () => { if (o.onend) o.onend(); };
-    u.onerror = e => { if (e && (e.error === 'interrupted' || e.error === 'canceled')) return; if (o.onend) o.onend(); };
-    try { speechSynthesis.speak(u); } catch (e) { if (o.onend) o.onend(); }
+    const role = o.role || (o.voice ? 'B' : 'A');
+    const rate = o.rate || S.settings.rate || 1;
+    stopCurrent();
+    if (S.settings.recorded !== false && playRecorded(text, role, rate, o)) return;
+    speakTTS(text, role, rate, o);
   }
-  function stopSpeak() { seqToken++; try { speechSynthesis.cancel(); } catch (e) { /* ignore */ } }
+  function stopSpeak() { seqToken++; stopCurrent(); }
   function speakSeq(items, done, rate) {
     const tok = ++seqToken;
     let i = 0;
@@ -279,26 +365,53 @@
       if (i >= items.length) { if (done) done(); return; }
       const it = items[i++];
       if (it.on) it.on();
-      speak(it.t, { voice: it.voice || 0, pitch: it.pitch || 1, rate: rate || it.rate, onend: () => { if (tok === seqToken) setTimeout(next, 280); } });
+      speak(it.t, { role: it.role || (it.voice ? 'B' : 'A'), pitch: it.pitch, rate: rate || it.rate, onend: () => { if (tok === seqToken) setTimeout(next, 120); } });
     })();
   }
 
-  /* ---------- speech recognition ---------- */
+  /* ---------- live speech recognition ---------- */
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let rec = null;
   const canListen = () => !!SR;
-  function stopListen() { try { rec && rec.stop(); } catch (e) { /* ignore */ } rec = null; }
-  function listenOnce(cb) {
-    if (!SR) { cb({ error: 'unsupported' }); return false; }
+  function stopListen() {
+    const r = rec; rec = null;
+    if (r) { r.__dead = true; try { r.abort ? r.abort() : r.stop(); } catch (e) { /* ignore */ } }
+  }
+  /* cb receives {type:'interim'|'end'|'error', text, reason, error}. Finishes after `patience` ms of silence. */
+  function listen(cb, o) {
+    o = o || {};
+    if (!SR) { cb({ type: 'error', error: 'unsupported' }); return null; }
     stopSpeak(); stopListen();
-    let last = '', ended = false;
+    const patience = o.patience || 1700, firstWait = o.firstWait || 9000, maxMs = o.max || 45000;
+    let text = '', finished = false, timer = null, hard = null;
     const r = (rec = new SR());
-    r.lang = 'fr-CA'; r.interimResults = true; r.maxAlternatives = 1; r.continuous = false;
-    r.onresult = e => { let t = ''; for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript; last = t; cb({ text: t }); };
-    r.onerror = e => cb({ error: (e && e.error) || 'error' });
-    r.onend = () => { if (ended) return; ended = true; cb({ end: true, text: last }); };
-    try { r.start(); } catch (e) { cb({ error: 'start-failed' }); return false; }
-    return true;
+    r.lang = o.lang || 'fr-CA'; r.interimResults = true; r.maxAlternatives = 1; r.continuous = o.continuous !== false;
+    const done = reason => {
+      if (finished) return; finished = true; clearTimeout(timer); clearTimeout(hard);
+      if (rec === r) rec = null;
+      if (r.__dead) return;
+      cb({ type: 'end', text: text.trim(), reason });
+    };
+    const arm = ms => { clearTimeout(timer); timer = setTimeout(() => { try { r.stop(); } catch (e) { /* ignore */ } setTimeout(() => done('silence'), 700); }, ms); };
+    r.onresult = e => {
+      let t = '';
+      for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript + ' ';
+      text = t.trim();
+      if (!r.__dead) cb({ type: 'interim', text });
+      arm(patience);
+    };
+    r.onerror = e => {
+      const er = (e && e.error) || 'error';
+      if (er === 'no-speech') { done('no-speech'); return; }
+      if (er === 'aborted') { done('aborted'); return; }
+      finished = true; clearTimeout(timer); clearTimeout(hard);
+      if (!r.__dead) cb({ type: 'error', error: er });
+    };
+    r.onend = () => done(text ? 'ended' : 'no-speech');
+    try { r.start(); } catch (e) { cb({ type: 'error', error: 'start-failed' }); return null; }
+    arm(firstWait);
+    hard = setTimeout(() => { try { r.stop(); } catch (e) { /* ignore */ } }, maxMs);
+    return { stop: () => { if (!finished) { clearTimeout(timer); try { r.stop(); } catch (e) { /* ignore */ } setTimeout(() => done('stopped'), 700); } } };
   }
 
   /* ---------- reusable UI pieces ---------- */
@@ -318,8 +431,8 @@
     if (l !== 'en' && l !== 'es') return;
     root.querySelectorAll('.tr').forEach(b => { const btn = b.querySelector('.tb[data-l="' + l + '"]'); if (btn && !b.dataset.cur) ACT.tr(btn); });
   }
-  const sayBtn = (text, rate, cls) => `<button class="ico-btn ${cls || ''}" data-act="say" data-t="${esc(text)}" ${rate ? 'data-r="' + rate + '"' : ''} aria-label="Listen">${icon('vol', 20)}</button>`;
-  ACT.say = el => { speak(el.dataset.t, { rate: el.dataset.r ? parseFloat(el.dataset.r) : undefined }); };
+  const sayBtn = (text, rate, cls, role) => `<button class="ico-btn ${cls || ''}" data-act="say" data-t="${esc(text)}" ${rate ? 'data-r="' + rate + '"' : ''} ${role ? 'data-role="' + role + '"' : ''} aria-label="Listen">${icon('vol', 20)}</button>`;
+  ACT.say = el => { speak(el.dataset.t, { rate: el.dataset.r ? parseFloat(el.dataset.r) : undefined, role: el.dataset.role || 'A' }); };
   const back = (href, label) => `<a class="back" href="${href}">${icon('back', 18)}<span>${esc(label || 'Back')}</span></a>`;
   const bar = pct => `<div class="bar"><i style="width:${Math.max(0, Math.min(100, pct * 100)).toFixed(0)}%"></i></div>`;
   function ring(pct, big, small) {
@@ -346,7 +459,7 @@
   /* ---------- router ---------- */
   let cleanups = [];
   const onLeave = fn => cleanups.push(fn);
-  const TAB = { home: 'home', words: 'words', match: 'words', rush: 'words', unscramble: 'words', read: 'read', listen: 'listen', dict: 'listen', numbers: 'listen', speak: 'speak', shadow: 'speak', twisters: 'speak', write: 'write' };
+  const TAB = { home: 'home', words: 'words', match: 'words', rush: 'words', unscramble: 'words', read: 'read', listen: 'listen', dict: 'listen', numbers: 'listen', speak: 'speak', talk: 'speak', shadow: 'speak', twisters: 'speak', write: 'write' };
   function draw(keepScroll) {
     const parts = (location.hash.replace(/^#\/?/, '') || 'home').split('/');
     const name = parts[0];
@@ -387,6 +500,6 @@
   window.addEventListener('hashchange', route);
 
   Object.assign(TEF, {
-    u: { esc, pad, dkey, dayIndex, addDays, day, shuffle, pick, strip, short, toks, compare, marksHtml, frNum, icon, toast, sfx, confetti, levelInfo, curStreak, addXP, QUESTS, doQuest, BADGES, checkBadges, updateHeader, speak, stopSpeak, speakSeq, voiceList, canListen, listenOnce, stopListen, trBox, sayBtn, back, bar, ring, copyText, todayIdx, todayPick, startTimer, save, resetAll, importAll, onLeave, rerender, go, route, applyAuto }
+    u: { esc, pad, dkey, dayIndex, addDays, day, shuffle, pick, strip, short, toks, compare, marksHtml, frNum, icon, toast, sfx, confetti, levelInfo, curStreak, addXP, QUESTS, doQuest, BADGES, checkBadges, updateHeader, speak, stopSpeak, speakSeq, voiceList, voiceTier, pickVoice, canListen, listen, stopListen, trBox, sayBtn, back, bar, ring, copyText, todayIdx, todayPick, startTimer, save, resetAll, importAll, onLeave, rerender, go, route, applyAuto }
   });
 })();

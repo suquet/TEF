@@ -71,6 +71,25 @@ Please write original text. Do not paste copyrighted articles, exam papers or ly
 
 > Write 5 new reading passages for a TEF Canada learner (level B1 to B2) about {topic}. Output a JavaScript array in this exact format: `{id, cat, lvl, mins, title:[fr,en,es], kw:[[fr,en,es]], s:[[fr,en,es]], qs:[{q, o:[3 options], a:indexOfCorrect, ex, exs}]}`. Each passage has 5 sentences. Use invented names, no real news claims, and natural Canadian-friendly French.
 
+## Voices, speaking and writing (v2)
+
+### More natural voices
+1. **Browser voices.** The app ranks the voices on the device and uses the most natural one (Edge "Natural", iOS Premium/Enhanced, Google). Settings, Voice lab, lists them and explains how to install better ones.
+2. **Recorded neural voices (best).** Generate MP3s for every built-in line once, and they play on every device:
+   - GitHub: Actions, **Generate voice audio**, Run workflow. It commits `audio/` and redeploys Pages.
+   - Or locally: `pip install edge-tts` then `python3 tools/generate-audio.py` (provider `edge`), or `--provider azure` with `AZURE_SPEECH_KEY` and `AZURE_SPEECH_REGION` (official, free tier).
+   - Note: `edge` uses an unofficial Microsoft endpoint and may break or conflict with its terms. `azure` is the supported route.
+   - Free-conversation replies are dynamic, so they use browser voices.
+
+### Speaking that reacts
+Speak missions listen while you talk: targets light up live, the partner answers, and hands-free mode reopens the mic automatically. This works offline with built-in keyword targets (`js/data/concepts.js`). Needs a browser with speech recognition (Chrome, Edge, Safari).
+
+### Free conversation (optional AI)
+More, Free conversation. Paste your own Anthropic API key in Settings. It is stored only in your browser, excluded from backups, and sent only to api.anthropic.com. Use a key with a low spend limit and remove it on shared devices.
+
+### Live writing checker
+Write shows underlines as you type, with one-tap fixes, register checks (tu/vous), connectors and meters. Offline rules always run. The optional LanguageTool online check sends your text to languagetool.org only after you opt in. With an API key you also get a full examiner-style review.
+
 ## Good to know
 
 * This is an independent practice tool. It is **not affiliated with, endorsed by, or a replacement for** the official TEF Canada, its organizers or IRCC. Check exam format, scoring, validity and immigration requirements on official sources.

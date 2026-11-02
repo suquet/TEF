@@ -302,3 +302,76 @@ summary { cursor: pointer; font-weight: 700; min-height: 32px; display: flex; al
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* ---------- live speaking and conversation ---------- */
+h1.page.sm { font-size: 1.25rem; margin: 8px 0; }
+.chatlog { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+.bubble { max-width: 92%; padding: 10px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); }
+.bubble.them { align-self: flex-start; border-bottom-left-radius: 4px; }
+.bubble.you { align-self: flex-end; background: var(--blue-soft); border-color: var(--blue); border-bottom-right-radius: 4px; }
+.bubble.model { align-self: stretch; max-width: 100%; background: var(--orange-soft); border-color: var(--orange); }
+.bubble .row { display: flex; align-items: flex-start; gap: 8px; }
+.caret { display: inline-block; width: 7px; height: 1em; background: var(--orange); margin-left: 2px; vertical-align: text-bottom; animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.cchip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; border: 1px dashed var(--line); font-size: .8rem; color: var(--muted); transition: all .2s; }
+.cchip.hit { border-style: solid; border-color: var(--good); background: var(--good-soft); color: var(--good); font-weight: 700; transform: scale(1.04); }
+.targets { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.toolrow { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; align-items: center; }
+.micbox { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 12px 0; }
+.mic.sm { width: 56px; height: 56px; }
+.microw { display: flex; align-items: center; gap: 12px; }
+.dock { position: sticky; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 8px); background: var(--bg); padding: 8px 0; border-top: 1px solid var(--line); z-index: 5; }
+.coach { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: .9rem; }
+.fix { margin: 4px 0; }
+.w-bad { color: var(--bad); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.w-ok { color: var(--good); font-weight: 700; }
+.w-pend { color: var(--muted); font-style: italic; }
+.arr { color: var(--muted); margin: 0 4px; }
+.marks.big { font-size: 1.25rem; line-height: 1.8; }
+.scn { display: block; text-align: left; width: 100%; padding: 12px 14px; margin: 6px 0; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+.scn.sel { border-color: var(--blue); background: var(--blue-soft); }
+.errline { color: var(--bad); font-size: .9rem; }
+.sum { padding: 20px 16px; }
+.emo-lg { font-size: 2.6rem; }
+.talk-cta { border-color: var(--orange); background: var(--orange-soft); }
+.center-row { justify-content: center; }
+
+/* ---------- live writing checker ---------- */
+.editor { position: relative; margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.editor:focus-within { border-color: var(--blue); box-shadow: var(--glow); }
+.editor .hl, .editor textarea { margin: 0; padding: 12px 14px; font: inherit; font-size: 1.05rem; line-height: 1.6; letter-spacing: normal; white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; tab-size: 4; border: 0; border-radius: 12px; }
+.editor .hl { position: absolute; inset: 0; color: transparent; pointer-events: none; overflow: hidden; }
+.editor textarea { position: relative; display: block; width: 100%; min-height: 220px; background: transparent; color: var(--text); resize: none; overflow: hidden; outline: none; }
+.hl mark { color: transparent; background: transparent; padding: 0; text-decoration: underline wavy var(--bad); text-decoration-thickness: 2px; text-underline-offset: 4px; text-decoration-skip-ink: none; }
+.hl mark.m-style { text-decoration-color: var(--orange); }
+.hl mark.m-tip { text-decoration: underline dotted var(--blue); text-decoration-thickness: 2px; text-underline-offset: 4px; }
+.live { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: .75rem; color: var(--muted); }
+.live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); }
+.live.busy .dot { background: var(--orange); animation: blink 1s steps(2) infinite; }
+.live.bad .dot { background: var(--bad); }
+.focusbar { position: sticky; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 6px); z-index: 6; box-shadow: var(--glow); border-radius: 12px; }
+.issue { padding: 10px 12px; margin: 8px 0; border-radius: 12px; border: 1px solid var(--line); border-left: 4px solid var(--bad); background: var(--surface); }
+.issue.style { border-left-color: var(--orange); }
+.issue.tip { border-left-color: var(--blue); }
+.issue p { margin: 4px 0 8px; }
+.ihead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ilab { font: 700 .7rem var(--mono); text-transform: uppercase; color: var(--muted); }
+.wrong { color: var(--bad); text-decoration: line-through; }
+.right { color: var(--good); font-weight: 700; }
+.irow { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip.ok { border-color: var(--good); color: var(--good); font-weight: 700; }
+.meters .mrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
+.meter { padding: 6px 2px; border-radius: 10px; border: 1px solid var(--line); display: flex; flex-direction: column; }
+.meter b { font-size: 1.05rem; }
+.meter small { font-size: .65rem; color: var(--muted); }
+.meter em { font-size: .6rem; color: var(--orange); font-style: normal; }
+.meter.good { border-color: var(--good); } .meter.good b { color: var(--good); }
+.meter.warn b { color: var(--orange); }
+.consent { border-color: var(--orange); }
+.okcard { border-color: var(--good); }
+.deep { border-color: var(--blue); }
+.vrow { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.vrow > div { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.vb { font: 700 .7rem var(--mono); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); }
+.vb.ok { color: var(--good); border-color: var(--good); } .vb.bad { color: var(--bad); border-color: var(--bad); }
+.tips { padding-left: 18px; }
